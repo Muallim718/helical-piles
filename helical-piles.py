@@ -1,12 +1,11 @@
-from math import radians, degrees, cos, sin, pi, pow, sqrt, atan
+from math import radians, degrees, cos, sin, pi, pow, sqrt, atan, tan
+from sys import exit
 
 
 # English Engineering units (lb and inches)
 helical_piles = 4
-concrete_blocks = 20
 jacking_force = 120000
 reaction_frame_weight = 5000
-concrete_weight = 2200
 # Soil on concrete
 friction_coefficient = 0.65
 # Bearing capacity factor for cohesive component of soil
@@ -17,7 +16,7 @@ ft_in_conversion = 12
  
 
 def main():
-    # Ask user for dimensions
+    # Prompt user for dimensions
     helix_diameter = float(input("Helix diameter (inches): "))
     # shaft_outer_diameter = float(input("Outer shaft diameter (inches): "))
     shaft_outer_diameter = 3.5
@@ -25,22 +24,33 @@ def main():
     launch_angle = 11.4
     shaft_length = float(input("Shaft length (ft): "))
     helices_number = int(input("Number of helices: "))
+    
     # Convert shaft length into inches
     shaft_length_inches = ft_in_conversion * shaft_length
     # Calculate angles
-    batter_angle = 45 - launch_angle
+    batter_angle = 20 - launch_angle
     launch_angle_radians = radians(launch_angle)
+
     # Calculate jacking force components
     jacking_force_x = jacking_force * cos(launch_angle_radians)
     jacking_force_y = jacking_force * sin(launch_angle_radians)
+
     # Get values from functions
     plate_depths = get_plate_depths(shaft_length_inches, helices_number)
     pile_forces_list = pile_forces(jacking_force_x, jacking_force_y, batter_angle)
     axial_sf = axial_safety_factor(pile_forces_list, helix_diameter, helices_number, plate_depths, shaft_outer_diameter)
     lateral_sf = lateral_safety_factor(helix_diameter, pile_forces_list, shaft_outer_diameter, shaft_length_inches, plate_depths, helices_number)
+    first_plate_depth = plate_depths[0]
+    helix_radius_limit = first_plate_depth * tan(radians(batter_angle))
+    helix_radius = helix_diameter / 2
+
+    if helix_radius_limit < helix_radius:
+        print("Input valid dimensions")
+        exit(0)
     # Let the user know whether their design will fail or not
     print(f"Axial safety factor: {axial_sf}")
     print(f"Lateral safety factor: {lateral_sf}")
+    exit(0)
 
 
 # Given a number of helicals, find their respective depths
@@ -69,17 +79,11 @@ def pile_forces(jacking_force_x, jacking_force_y, batter_angle):
         "F_hpl": 0
     }
 
-    # Horizontal friction force of concrete blocks
-    F_cb = concrete_blocks * concrete_weight * friction_coefficient
-    # Horizontal force on helical pile
-    F_hpx = jacking_force_x - F_cb
-    # Vertical force on helical pile
-    F_hpy = jacking_force_y - reaction_frame_weight
     # Resultant force
-    F_hp = sqrt((F_hpx ** 2) + (F_hpy ** 2))
+    F_hp = sqrt(pow(jacking_force_x, 2) + pow(jacking_force_y, 2))
 
     # Angle of force on helical piles from horizontal, degrees
-    phi = degrees(atan(F_hpy / F_hpx))
+    phi = degrees(atan(jacking_force_y / jacking_force_x))
     # Angle between resultant force and piles, degrees
     gamma = phi + batter_angle
     gamma_radians = radians(gamma)
