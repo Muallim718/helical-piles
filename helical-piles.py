@@ -1,4 +1,4 @@
-from math import radians, degrees, cos, sin, pi, pow, sqrt, atan, tan
+from math import radians, degrees, cos, sin, pow, sqrt, atan, tan, pi
 from sys import exit
 
 
@@ -24,7 +24,7 @@ def main():
     launch_angle = 11.4
     shaft_length = float(input("Shaft length (ft): "))
     helices_number = int(input("Number of helices: "))
-    
+
     # Convert shaft length into inches
     shaft_length_inches = ft_in_conversion * shaft_length
     # Calculate angles
@@ -47,6 +47,7 @@ def main():
     if helix_radius_limit < helix_radius:
         print("Input valid dimensions")
         exit(0)
+    
     # Let the user know whether their design will fail or not
     print(f"Axial safety factor: {axial_sf}")
     print(f"Lateral safety factor: {lateral_sf}")
