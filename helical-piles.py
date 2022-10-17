@@ -36,11 +36,12 @@ def main():
     jacking_force_y = jacking_force * sin(launch_angle_radians)
 
     # Get values from functions
-    plate_depths = get_plate_depths(shaft_length_inches, helices_number)
+    shaft_plate_depths = plate_depths_shaft(shaft_length_inches, helices_number)
+    surface_plate_depths = plate_depths_surface(shaft_plate_depths, batter_angle)
     pile_forces_list = pile_forces(jacking_force_x, jacking_force_y, batter_angle)
-    axial_sf = axial_safety_factor(pile_forces_list, helix_diameter, helices_number, plate_depths, shaft_outer_diameter)
-    lateral_sf = lateral_safety_factor(helix_diameter, pile_forces_list, shaft_outer_diameter, shaft_length_inches, plate_depths, helices_number)
-    first_plate_depth = plate_depths[0]
+    axial_sf = axial_safety_factor(pile_forces_list, helix_diameter, helices_number, shaft_plate_depths, shaft_outer_diameter)
+    lateral_sf = lateral_safety_factor(helix_diameter, pile_forces_list, shaft_outer_diameter, shaft_length_inches, surface_plate_depths, helices_number)
+    first_plate_depth = shaft_plate_depths[0]
     helix_radius_limit = first_plate_depth * tan(radians(batter_angle))
     helix_radius = helix_diameter / 2
 
@@ -55,7 +56,7 @@ def main():
 
 
 # Given a number of helicals, find their respective depths
-def get_plate_depths(shaft_length, helices_number):
+def plate_depths_shaft(shaft_length, helices_number):
     plate_depths = []
     plate_depth = 0
     even_spacing = shaft_length / helices_number
@@ -65,6 +66,14 @@ def get_plate_depths(shaft_length, helices_number):
             plate_depths.append(round(plate_depth, 4))
 
     return plate_depths
+
+def plate_depths_surface(shaft_plate_depths, batter_angle):
+    plate_depths_surface = []
+    for plate in range(len(shaft_plate_depths)):
+        plate_depth_surface = shaft_plate_depths[plate] * sin(radians(batter_angle))
+        plate_depths_surface.append(plate_depth_surface)
+    
+    return plate_depths_surface
 
 
 # Calculate pile forces
@@ -99,7 +108,7 @@ def pile_forces(jacking_force_x, jacking_force_y, batter_angle):
     return pile_forces
 
 
-def axial_safety_factor(pile_forces, helix_diameter, helices_number, plate_depths, shaft_outer_diameter):
+def axial_safety_factor(pile_forces, helix_diameter, helices_number, shaft_plate_depths, shaft_outer_diameter):
     # Axial force on each pile
     pile_axial_force = pile_forces["F_hpa"]
     # Calculate helix area
@@ -107,14 +116,14 @@ def axial_safety_factor(pile_forces, helix_diameter, helices_number, plate_depth
     # Calculate ultimate_bearing_pressure
     ultimate_bearing_pressure = 9 * soil_cohesion
     # Calculate axial capacity
-    axial_capacity = (helices_number * ultimate_bearing_pressure * helix_area) + soil_adhesion * (plate_depths[-1]) * pi * shaft_outer_diameter
+    axial_capacity = (helices_number * ultimate_bearing_pressure * helix_area) + soil_adhesion * (shaft_plate_depths[-1]) * pi * shaft_outer_diameter
     # Calculate axial safety factor
     axial_safety_factor = axial_capacity / pile_axial_force
 
     return axial_safety_factor
 
 
-def lateral_safety_factor(helix_diameter, pile_forces, shaft_outer_diameter, shaft_length_inches, plate_depths, helices_number):
+def lateral_safety_factor(helix_diameter, pile_forces, shaft_outer_diameter, shaft_length_inches, surface_plate_depths, helices_number):
     length_above_ground = 0
     general_case = bearing_capacity * soil_cohesion
     helix_radius = helix_diameter / 2
@@ -123,14 +132,14 @@ def lateral_safety_factor(helix_diameter, pile_forces, shaft_outer_diameter, sha
     bearing_resistance = []
     uplift_resistance = []
 
-    for plate in range(len(plate_depths)):
-        if plate_depths[plate] < 5 * helix_diameter:
-            bearing_resistance_plate = ((bearing_capacity - 6.2)/(5 * helix_diameter) * plate_depths[plate] + 6.2) * soil_cohesion
+    for plate in range(len(surface_plate_depths)):
+        if surface_plate_depths[plate] < 5 * helix_diameter:
+            bearing_resistance_plate = ((bearing_capacity - 6.2)/(5 * helix_diameter) * surface_plate_depths[plate] + 6.2) * soil_cohesion
             bearing_resistance.append(bearing_resistance_plate)
         else:
             bearing_resistance.append(general_case)
-        if plate_depths[plate] < 2 * helix_diameter:
-            uplift_resistance_plate = (bearing_capacity * plate_depths[plate] * soil_cohesion)/(2 * helix_diameter)
+        if surface_plate_depths[plate] < 2 * helix_diameter:
+            uplift_resistance_plate = (bearing_capacity * surface_plate_depths[plate] * soil_cohesion)/(2 * helix_diameter)
             uplift_resistance.append(uplift_resistance_plate)
         else:
             uplift_resistance.append(general_case)
@@ -146,13 +155,13 @@ def lateral_safety_factor(helix_diameter, pile_forces, shaft_outer_diameter, sha
     even_case = helices_number // 2
 
     expr1 = 10.5 * e * pow(d, 2) + 9 * (L - e) * e * d + 10.5 * pow(d, 3) + 4.5 * d * pow((L - e), 2)
-    expr2 = K_2 * (sum(bearing_resistance) + sum(uplift_resistance)) / soil_cohesion
+    expr2 = K_2 * (sum(bearing_resistance) + sum(uplift_resistance))
     if helices_number % 2 == 0:
-        expr3 = K_1 * soil_adhesion * (sum(plate_depths[even_case:]) - sum(plate_depths[:-even_case]))
+        expr3 = soil_cohesion * K_1 * soil_adhesion * (sum(surface_plate_depths[even_case:]) - sum(surface_plate_depths[:-even_case]))
     else:
         odd_case = helices_number // 2 + 1
-        expr3 = K_1 * soil_adhesion * (sum(plate_depths[odd_case:]) - sum(plate_depths[:-odd_case]))
-    M = expr1 + expr2 + expr3
+        expr3 = soil_cohesion * K_1 * soil_adhesion * (sum(surface_plate_depths[odd_case:]) - sum(surface_plate_depths[:-odd_case]))
+    M = expr1 + (expr2 / expr3)
 
     X = -e + (sqrt(324 * d ** (2 * e ** 2) + 36 * d * M) / (18 * d))
 
