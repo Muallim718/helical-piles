@@ -4,7 +4,7 @@ from sys import exit
 
 # English Engineering units (lb and inches)
 helical_piles = 4
-jacking_force = 120000
+jacking_force = 37000
 reaction_frame_weight = 5000
 # Soil on concrete
 friction_coefficient = 0.65
@@ -21,14 +21,14 @@ def main():
     # shaft_outer_diameter = float(input("Outer shaft diameter (inches): "))
     shaft_outer_diameter = 3.5
     # launch_angle = float(input("Launch angle (degrees): "))
-    launch_angle = 11.4
+    launch_angle = 12.0
     shaft_length = float(input("Shaft length (ft): "))
     helices_number = int(input("Number of helices: "))
 
     # Convert shaft length into inches
     shaft_length_inches = ft_in_conversion * shaft_length
     # Calculate angles
-    batter_angle = 20 - launch_angle
+    batter_angle = 45
     launch_angle_radians = radians(launch_angle)
 
     # Calculate jacking force components
@@ -52,6 +52,7 @@ def main():
     # Let the user know whether their design will fail or not
     print(f"Axial safety factor: {axial_sf}")
     print(f"Lateral safety factor: {lateral_sf}")
+    print(pile_forces_list["F_hpat"], pile_forces_list["F_hplt"])
     exit(0)
 
 
